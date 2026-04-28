@@ -10,6 +10,7 @@ const crypto = require('crypto');
 dotenv.config({ override: true });
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 const multer = require('multer');
@@ -45,7 +46,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Upload Route
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-  const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
   res.json({ imageUrl });
 });
 
