@@ -5,7 +5,7 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['user', 'admin', 'ngo'], default: 'user' },
+  role: { type: String, enum: ['user', 'admin', 'ngo'], default: 'user', set: v => v ? v.toLowerCase() : v },
   hoursContributed: { type: Number, default: 0 },
   drivesJoined: { type: Number, default: 0 },
   events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],

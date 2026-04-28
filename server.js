@@ -69,7 +69,8 @@ const razorpay = new Razorpay({
 // --- Auth Routes ---
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password, role, phoneNumber } = req.body;
+    let { name, email, password, role, phoneNumber } = req.body;
+    email = email.toLowerCase();
     const userExists = await User.findOne({ email });
     if (userExists) return res.status(400).json({ message: 'User already exists' });
     
@@ -83,7 +84,8 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email.toLowerCase();
     const user = await User.findOne({ email });
     if (user && (await user.matchPassword(password))) {
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '30d' });
@@ -249,6 +251,7 @@ app.get('/api/campaigns/active', async (req, res) => {
       title: campaign.title,
       goal: campaign.goal,
       spent: campaign.spent,
+      galleryImages: campaign.galleryImages,
       raised: raised,
       donorsCount: uniqueDonors || donations.length
     });
@@ -261,7 +264,7 @@ app.put('/api/campaigns/:id', protect, admin, async (req, res) => {
   try {
     const campaign = await Campaign.findByIdAndUpdate(
       req.params.id, 
-      { title: req.body.title, goal: req.body.goal, spent: req.body.spent },
+      { title: req.body.title, goal: req.body.goal, spent: req.body.spent, galleryImages: req.body.galleryImages },
       { new: true }
     );
     res.json(campaign);
@@ -390,11 +393,29 @@ app.get('/api/users/leaderboard', async (req, res) => {
         hours: u.hoursContributed,
         drives: u.drivesJoined,
         badge,
-        img: u.avatarUrl || `https://i.pravatar.cc/150?img=${(idx * 4 + 11) % 70}` // deterministic random avatar
+        img: u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=10b981&color=fff&size=150`
       };
     });
     
     res.json(formattedUsers);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: 'user' });
+    const latestUsers = await User.find({ role: 'user' })
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .select('name avatarUrl');
+      
+    const avatars = latestUsers.map(u => 
+      u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=10b981&color=fff&size=100`
+    );
+    
+    res.json({ totalUsers, avatars });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
